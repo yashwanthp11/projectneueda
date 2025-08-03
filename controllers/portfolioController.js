@@ -1,131 +1,84 @@
-const db = require('../config/db');
+const pool = require('../config/db');
 
-exports.getPortfolio = (req, res) => {
-  db.all('SELECT *, volume * price AS value FROM portfolio WHERE volume > 0 ORDER BY ticker', (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+exports.getPortfolio = async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT *, quantity * purchase_price AS value FROM portfolio');
     res.json(rows);
-  });
-};
-
-exports.getPortfolioStats = (req, res) => {
-  db.all(`
-    SELECT 
-      COUNT(*) as total_stocks,
-      SUM(volume * price) as total_value,
-      AVG(volume * price) as avg_value,
-      MIN(volume * price) as min_value,
-      MAX(volume * price) as max_value
-    FROM portfolio
-    WHERE volume > 0
-  `, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows[0]);
-  });
-};
-
-exports.getStockByTicker = (req, res) => {
-  const ticker = req.params.ticker.toLowerCase();
-  db.get('SELECT *, volume * price AS value FROM portfolio WHERE LOWER(ticker) = ?', [ticker], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Stock not found' });
-    res.json(row);
-  });
-};
-
-exports.updateStock = (req, res) => {
-  const { ticker, volume, price, action } = req.body;
-
-  if (!ticker || !volume || !price || !action) {
-    return res.status(400).json({ error: 'Missing required fields: ticker, volume, price, action' });
+  } catch (error) {
+    console.error('Error fetching portfolio:', error);
+    res.status(500).json({ error: error.message });
   }
+};
 
-  if (action === 'buy') {
-    // For buying, use INSERT OR REPLACE to add or update the stock
-    const sql = `
-      INSERT INTO portfolio (ticker, volume, price)
-      VALUES (?, ?, ?)
-      ON CONFLICT(ticker) DO UPDATE SET
-        volume = volume + excluded.volume,
-        price = excluded.price
-    `;
-    
-    db.run(sql, [ticker, volume, price], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ 
-        success: true, 
-        message: `Bought ${volume} shares of ${ticker} at $${price}`,
-        rowsAffected: this.changes 
-      });
-    });
-  } else if (action === 'sell') {
-    // For selling, first check if we have enough shares
-    db.get('SELECT volume FROM portfolio WHERE LOWER(ticker) = LOWER(?)', [ticker], (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
+exports.updateStock = async (req, res) => {
+  const { symbol, quantity, price, action, company_name } = req.body;
+  
+  console.log('Received request:', { symbol, quantity, price, action, company_name });
+
+  try {
+    // Validation
+    if (!symbol || !quantity || !price || !action) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // First, check if the stock exists
+    const [existingStock] = await pool.execute('SELECT quantity FROM portfolio WHERE symbol = ?', [symbol]);
+
+    if (existingStock.length > 0) {
+      // Stock exists, update it
+      const currentQuantity = existingStock[0].quantity;
+      const newQuantity = action === 'BUY' ? currentQuantity + quantity : currentQuantity - quantity;
       
-      if (!row) {
-        return res.status(404).json({ error: `No holdings found for ${ticker}` });
-      }
-      
-      const currentVolume = row.volume;
-      const newVolume = currentVolume - volume;
-      
-      if (newVolume < 0) {
-        return res.status(400).json({ 
-          error: `Cannot sell ${volume} shares. You only have ${currentVolume} shares of ${ticker}` 
-        });
-      }
-      
-      if (newVolume === 0) {
-        // If selling all shares, remove the stock entirely
-        db.run('DELETE FROM portfolio WHERE LOWER(ticker) = LOWER(?)', [ticker], function (err) {
-          if (err) return res.status(500).json({ error: err.message });
-          res.json({ 
-            success: true, 
-            message: `Sold all ${volume} shares of ${ticker}. Removed from portfolio.`,
-            rowsAffected: this.changes 
-          });
-        });
+      if (newQuantity <= 0) {
+        // Remove the stock if quantity is 0 or negative
+        await pool.execute('DELETE FROM portfolio WHERE symbol = ?', [symbol]);
       } else {
-        // If selling partial shares, update the volume and price
-        db.run(
-          'UPDATE portfolio SET volume = ?, price = ? WHERE LOWER(ticker) = LOWER(?)', 
-          [newVolume, price, ticker], 
-          function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ 
-              success: true, 
-              message: `Sold ${volume} shares of ${ticker} at $${price}. ${newVolume} shares remaining.`,
-              rowsAffected: this.changes 
-            });
-          }
-        );
+        // Update the stock
+        await pool.execute('UPDATE portfolio SET quantity = ?, purchase_price = ? WHERE symbol = ?', 
+                          [newQuantity, price, symbol]);
       }
-    });
-  } else {
-    return res.status(400).json({ error: 'Action must be either "buy" or "sell"' });
+    } else {
+      // Stock doesn't exist, insert it (only for buy actions)
+      if (action === 'BUY') {
+        await pool.execute('INSERT INTO portfolio (symbol, quantity, purchase_price, company_name) VALUES (?, ?, ?, ?)', 
+                          [symbol, quantity, price, company_name || symbol]);
+      } else {
+        return res.status(400).json({ error: 'Cannot sell stock that is not in portfolio' });
+      }
+    }
+
+    // Log the transaction
+    await logTransaction(symbol, quantity, price, action);
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.deleteStock = (req, res) => {
-  const ticker = req.params.ticker;
-  db.run('DELETE FROM portfolio WHERE LOWER(ticker) = LOWER(?)', [ticker], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Stock not found' });
-    res.json({ 
-      success: true, 
-      message: `Deleted ${ticker} from portfolio`,
-      rowsAffected: this.changes 
-    });
-  });
-};
+async function logTransaction(symbol, quantity, price, action) {
+  try {
+    await pool.execute('INSERT INTO transactions (symbol, quantity, price, action) VALUES (?, ?, ?, ?)', 
+                      [symbol, quantity, price, action]);
+  } catch (error) {
+    console.error('Error logging transaction:', error);
+    throw error;
+  }
+}
 
-exports.clearPortfolio = (req, res) => {
-  db.run('DELETE FROM portfolio', function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ 
-      success: true, 
-      message: 'Portfolio cleared',
-      rowsAffected: this.changes 
-    });
-  });
+exports.getHistory = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i') as timestamp,
+             SUM(CASE WHEN action='BUY' THEN quantity * price ELSE -quantity * price END) AS net
+      FROM transactions
+      GROUP BY DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i')
+      ORDER BY timestamp ASC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    res.status(500).json({ error: error.message });
+  }
 };

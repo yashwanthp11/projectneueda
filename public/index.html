@@ -1,599 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Portfolio Manager</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    form {
-      background: #f5f5f5;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    
-    form input, form select, form button {
-      margin: 5px;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    
-    form button {
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    
-    form button:hover {
-      background: #0056b3;
-    }
-    
-    #portfolioList {
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      list-style: none;
-    }
-    
-    #portfolioList li {
-      /* Styles are now applied inline for better control */
-    }
-    
-    .charts-container {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-    
-    .chart-section {
-      flex: 1;
-      min-width: 300px;
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 8px;
-    }
-    
-    .chart-section h3 {
-      margin-top: 0;
-      color: #333;
-      text-align: center;
-    }
-    
-    .chart-section canvas {
-      max-width: 100%;
-      width: 100%;
-      height: 300px !important;
-    }
-    
-    #pieChart {
-      height: 350px !important;
-    }
-    
-    #portfolioChart {
-      height: 300px !important;
-    }
-    
-    .search-container {
-      position: relative;
-      display: inline-block;
-      width: 100%;
-    }
-    
-    .search-suggestions {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ddd;
-      border-top: none;
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 1000;
-      display: none;
-    }
-    
-    .suggestion-item {
-      padding: 8px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .suggestion-item:hover, .suggestion-item.active {
-      background-color: #e3f2fd;
-    }
-    
-    .suggestion-item:last-child {
-      border-bottom: none;
-    }
-    
-    .stock-info {
-      font-size: 0.9em;
-      color: #666;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Portfolio Manager</h1>
-  
-  <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
-    <h3 style="margin: 0 0 10px 0; color: #1976d2;">💡 How to use:</h3>
-    <ul style="margin: 0; padding-left: 20px; color: #333;">
-      <li>Start typing a stock symbol or company name to see suggestions</li>
-      <li>Use arrow keys to navigate suggestions, Enter to select</li>
-      <li>Popular stocks included: AAPL, MSFT, GOOGL, TCS, INFY, and more</li>
-      <li>Charts update automatically when you buy or sell stocks</li>
-    </ul>
-  </div>
-  
-  <form id="tradeForm">
-    <div class="search-container">
-      <input type="text" id="ticker" placeholder="🔍 Search for stocks (e.g., AAPL, MSFT, GOOGL)" required autocomplete="off" />
-      <div id="searchSuggestions" class="search-suggestions"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Portfolio Manager</h1>
+        </div>
+        
+        <div class="content">
+            <!-- Stock Trading Form -->
+            <div class="section">
+                <h2>Trade Stocks</h2>
+                <form id="stockForm">
+                    <div class="form-group">
+                        <label for="stockSearch">Stock Symbol:</label>
+                        <div class="search-container">
+                            <input type="text" id="stockSearch" placeholder="Search for stocks (e.g., AAPL, GOOGL)..." autocomplete="off">
+                            <div class="suggestions" id="suggestions"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="quantity">Quantity:</label>
+                        <input type="number" id="quantity" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price">Price per Share:</label>
+                        <input type="number" id="price" step="0.01" min="0.01" required>
+                    </div>
+                    
+                    <button type="submit" name="action" value="buy" class="btn">Buy</button>
+                    <button type="submit" name="action" value="sell" class="btn sell">Sell</button>
+                </form>
+                
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
+            </div>
+
+            <!-- Portfolio Display -->
+            <div class="section">
+                <h2>Current Portfolio</h2>
+                <div id="portfolioSummary" class="portfolio-summary" style="display: none;">
+                    <h3>Total Portfolio Value</h3>
+                    <div class="total-value" id="totalValue">$0.00</div>
+                    <div class="portfolio-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Stocks</div>
+                            <div class="stat-value" id="totalStocks">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Shares</div>
+                            <div class="stat-value" id="totalShares">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg. Price</div>
+                            <div class="stat-value" id="avgPrice">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="portfolio" class="portfolio-grid"></div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="section">
+                <h2>Portfolio Analytics</h2>
+                <div class="charts-container">
+                    <div class="chart-section">
+                        <h3>Portfolio Distribution</h3>
+                        <canvas id="pieChart" width="300" height="200"></canvas>
+                    </div>
+                    <div class="chart-section">
+                        <h3>Stock Values</h3>
+                        <canvas id="barChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio History -->
+            <div class="section">
+                <h2>Portfolio History</h2>
+                <div class="chart-section" style="height: 250px;">
+                    <canvas id="historyChart" width="400" height="150"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-    <input type="number" id="volume" placeholder="Volume" required />
-    <input type="number" step="0.01" id="price" placeholder="Price" required />
-    <select id="action">
-      <option value="buy">Buy</option>
-      <option value="sell">Sell</option>
-    </select>
-    <button type="submit">Add to Portfolio</button>
-  </form>
 
-  <h2>Holdings</h2>
-  <ul id="portfolioList"></ul>
-
-  <h2>Total Value: $<span id="totalValue">0</span></h2>
-  
-  <div class="charts-container">
-    <div class="chart-section">
-      <h3>Holdings Distribution</h3>
-      <div style="border: 2px solid #007bff; padding: 10px;">
-        <canvas id="pieChart" style="border: 1px solid red; min-height: 300px;"></canvas>
-      </div>
-    </div>
-    <div class="chart-section">
-      <h3>Holdings Value</h3>
-      <div style="border: 2px solid #007bff; padding: 10px;">
-        <canvas id="portfolioChart" style="border: 1px solid red; min-height: 300px;"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Check if Chart.js is loaded
-    if (typeof Chart === 'undefined') {
-      console.error('Chart.js is not loaded!');
-      alert('Chart.js library failed to load. Please check your internet connection.');
-    } else {
-      console.log('Chart.js loaded successfully, version:', Chart.version);
-    }
-
-    // Popular stock symbols and company names for search suggestions
-    const stockDatabase = [
-      { symbol: 'AAPL', name: 'Apple Inc.' },
-      { symbol: 'MSFT', name: 'Microsoft Corporation' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc. (Google)' },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-      { symbol: 'TSLA', name: 'Tesla Inc.' },
-      { symbol: 'META', name: 'Meta Platforms Inc. (Facebook)' },
-      { symbol: 'NVDA', name: 'NVIDIA Corporation' },
-      { symbol: 'NFLX', name: 'Netflix Inc.' },
-      { symbol: 'TCS', name: 'Tata Consultancy Services' },
-      { symbol: 'INFY', name: 'Infosys Limited' },
-      { symbol: 'RELIANCE', name: 'Reliance Industries Limited' },
-      { symbol: 'HDFC', name: 'HDFC Bank Limited' },
-      { symbol: 'ICICI', name: 'ICICI Bank Limited' },
-      { symbol: 'WIPRO', name: 'Wipro Limited' },
-      { symbol: 'TATA', name: 'Tata Motors Limited' },
-      { symbol: 'ITC', name: 'ITC Limited' },
-      { symbol: 'BAJAJ', name: 'Bajaj Finance Limited' },
-      { symbol: 'SBI', name: 'State Bank of India' },
-      { symbol: 'AIRTEL', name: 'Bharti Airtel Limited' },
-      { symbol: 'ADANI', name: 'Adani Enterprises Limited' },
-      { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
-      { symbol: 'V', name: 'Visa Inc.' },
-      { symbol: 'JNJ', name: 'Johnson & Johnson' },
-      { symbol: 'WMT', name: 'Walmart Inc.' },
-      { symbol: 'PG', name: 'Procter & Gamble Co.' },
-      { symbol: 'UNH', name: 'UnitedHealth Group Inc.' },
-      { symbol: 'DIS', name: 'The Walt Disney Company' },
-      { symbol: 'HD', name: 'The Home Depot Inc.' },
-      { symbol: 'MA', name: 'Mastercard Inc.' },
-      { symbol: 'BAC', name: 'Bank of America Corp.' }
-    ];
-
-    // Search functionality
-    function setupSearch() {
-      const tickerInput = document.getElementById('ticker');
-      const suggestionsDiv = document.getElementById('searchSuggestions');
-
-      tickerInput.addEventListener('input', function() {
-        const query = this.value.toLowerCase().trim();
-        
-        if (query.length < 1) {
-          suggestionsDiv.style.display = 'none';
-          return;
-        }
-
-        const matches = stockDatabase.filter(stock => 
-          stock.symbol.toLowerCase().includes(query) || 
-          stock.name.toLowerCase().includes(query)
-        ).slice(0, 8); // Limit to 8 suggestions
-
-        if (matches.length > 0) {
-          displaySuggestions(matches, suggestionsDiv, tickerInput);
-        } else {
-          suggestionsDiv.style.display = 'none';
-        }
-      });
-
-      // Hide suggestions when clicking outside
-      document.addEventListener('click', function(e) {
-        if (!tickerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-          suggestionsDiv.style.display = 'none';
-        }
-      });
-
-      // Handle keyboard navigation
-      tickerInput.addEventListener('keydown', function(e) {
-        const suggestions = suggestionsDiv.querySelectorAll('.suggestion-item');
-        const activeSuggestion = suggestionsDiv.querySelector('.suggestion-item.active');
-        
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          if (activeSuggestion) {
-            activeSuggestion.classList.remove('active');
-            const next = activeSuggestion.nextElementSibling;
-            if (next) {
-              next.classList.add('active');
-            } else {
-              suggestions[0]?.classList.add('active');
-            }
-          } else {
-            suggestions[0]?.classList.add('active');
-          }
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (activeSuggestion) {
-            activeSuggestion.classList.remove('active');
-            const prev = activeSuggestion.previousElementSibling;
-            if (prev) {
-              prev.classList.add('active');
-            } else {
-              suggestions[suggestions.length - 1]?.classList.add('active');
-            }
-          } else {
-            suggestions[suggestions.length - 1]?.classList.add('active');
-          }
-        } else if (e.key === 'Enter' && activeSuggestion) {
-          e.preventDefault();
-          selectStock(activeSuggestion.dataset.symbol, activeSuggestion.dataset.name, tickerInput, suggestionsDiv);
-        } else if (e.key === 'Escape') {
-          suggestionsDiv.style.display = 'none';
-        }
-      });
-    }
-
-    function displaySuggestions(matches, suggestionsDiv, tickerInput) {
-      suggestionsDiv.innerHTML = '';
-      
-      matches.forEach(stock => {
-        const suggestionItem = document.createElement('div');
-        suggestionItem.className = 'suggestion-item';
-        suggestionItem.dataset.symbol = stock.symbol;
-        suggestionItem.dataset.name = stock.name;
-        suggestionItem.innerHTML = `
-          <div><strong>${stock.symbol}</strong></div>
-          <div class="stock-info">${stock.name}</div>
-        `;
-        
-        suggestionItem.addEventListener('click', function() {
-          selectStock(stock.symbol, stock.name, tickerInput, suggestionsDiv);
-        });
-        
-        suggestionItem.addEventListener('mouseenter', function() {
-          // Remove active class from all suggestions
-          suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
-            item.classList.remove('active');
-          });
-          // Add active class to hovered item
-          this.classList.add('active');
-        });
-        
-        suggestionsDiv.appendChild(suggestionItem);
-      });
-      
-      suggestionsDiv.style.display = 'block';
-    }
-
-    function selectStock(symbol, name, tickerInput, suggestionsDiv) {
-      tickerInput.value = symbol;
-      suggestionsDiv.style.display = 'none';
-      
-      // Focus on the next input field
-      document.getElementById('volume').focus();
-    }
-
-    async function loadPortfolio() {
-      try {
-        const res = await fetch('/api/portfolio');
-        const data = await res.json();
-        
-        const list = document.getElementById('portfolioList');
-        const totalValueElem = document.getElementById('totalValue');
-        const tickers = [];
-        const values = [];
-
-        let totalValue = 0;
-        list.innerHTML = '';
-        
-        if (data.length === 0) {
-          const li = document.createElement('li');
-          li.textContent = 'No holdings yet. Add some stocks to get started!';
-          li.style.fontStyle = 'italic';
-          li.style.color = '#666';
-          list.appendChild(li);
-          totalValueElem.textContent = '0.00';
-          // Clear charts when no data
-          if (window.pieChart && typeof window.pieChart.destroy === 'function') {
-            window.pieChart.destroy();
-          }
-          if (window.portfolioChart && typeof window.portfolioChart.destroy === 'function') {
-            window.portfolioChart.destroy();
-          }
-          return;
-        }
-        
-        data.forEach(item => {
-          const li = document.createElement('li');
-          li.style.cssText = `
-            margin: 8px 0;
-            padding: 12px;
-            background: white;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          `;
-          
-          const stockInfo = document.createElement('div');
-          stockInfo.innerHTML = `
-            <strong style="color: #007bff; font-size: 1.1em;">${item.ticker.toUpperCase()}</strong><br>
-            <span style="color: #666; font-size: 0.9em;">
-              ${item.volume} shares @ $${item.price.toFixed(2)} each
-            </span>
-          `;
-          
-          const valueInfo = document.createElement('div');
-          valueInfo.style.cssText = `
-            text-align: right;
-            font-weight: bold;
-            color: #28a745;
-            font-size: 1.1em;
-          `;
-          valueInfo.textContent = `$${item.value.toFixed(2)}`;
-          
-          li.appendChild(stockInfo);
-          li.appendChild(valueInfo);
-          list.appendChild(li);
-          
-          tickers.push(item.ticker.toUpperCase());
-          values.push(item.value);
-          totalValue += item.value;
-        });
-
-        totalValueElem.textContent = totalValue.toFixed(2);
-        renderCharts(tickers, values);
-      } catch (error) {
-        console.error('Error loading portfolio:', error);
-      }
-    }
-
-    function renderCharts(labels, data) {
-      renderPieChart(labels, data);
-      renderBarChart(labels, data);
-    }
-
-    function renderPieChart(labels, data) {
-      const canvas = document.getElementById('pieChart');
-      if (!canvas) {
-        console.error('Pie chart canvas not found!');
-        return;
-      }
-      
-      const ctx = canvas.getContext('2d');
-      if (window.pieChart && typeof window.pieChart.destroy === 'function') {
-        window.pieChart.destroy();
-      }
-      
-      // Generate different colors for each slice
-      const colors = labels.map((_, index) => {
-        const hue = (index * 137.508) % 360; // Golden angle approximation for good color distribution
-        return `hsl(${hue}, 70%, 60%)`;
-      });
-
-      try {
-        window.pieChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Portfolio Holdings',
-              data: data,
-              backgroundColor: colors,
-              borderColor: colors.map(color => color.replace('60%', '40%')), // Darker border
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-              },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.parsed;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    const percentage = ((value / total) * 100).toFixed(1);
-                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
-                  }
-                }
-              }
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error creating pie chart:', error);
-      }
-    }
-
-    function renderBarChart(labels, data) {
-      const canvas = document.getElementById('portfolioChart');
-      if (!canvas) {
-        console.error('Bar chart canvas not found!');
-        return;
-      }
-      
-      const ctx = canvas.getContext('2d');
-      if (window.portfolioChart && typeof window.portfolioChart.destroy === 'function') {
-        window.portfolioChart.destroy();
-      }
-      
-      try {
-        window.portfolioChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Stock Value',
-              data: data,
-              backgroundColor: 'rgba(75, 192, 192, 0.7)',
-              borderColor: 'rgba(75, 192, 192, 1)',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: { 
-                beginAtZero: true,
-                ticks: {
-                  callback: function(value) {
-                    return '$' + value.toFixed(0);
-                  }
-                }
-              }
-            },
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
-                  }
-                }
-              }
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error creating bar chart:', error);
-      }
-    }
-
-    document.getElementById('tradeForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const ticker = document.getElementById('ticker').value;
-      const volume = parseInt(document.getElementById('volume').value, 10);
-      const price = parseFloat(document.getElementById('price').value);
-      const action = document.getElementById('action').value;
-
-      try {
-        const response = await fetch('/api/portfolio', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticker, volume, price, action })
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-          // Show success message temporarily
-          showMessage(result.message, 'success');
-          
-          // Reset form after successful submission
-          document.getElementById('tradeForm').reset();
-          
-          // Reload portfolio to reflect changes
-          loadPortfolio();
-        } else {
-          showMessage(result.error, 'error');
-        }
-      } catch (error) {
-        showMessage('Network error. Please try again.', 'error');
-      }
-    });
-
-    // Function to show temporary messages
-    function showMessage(message, type) {
-      // Remove any existing message
-      const existingMessage = document.querySelector('.temp-message');
-      if (existingMessage) {
-        existingMessage.remove();
-      }
-      
-      // Create new message element
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'temp-message';
-      messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 8px;
-        font-weight: bold;
-        z-index: 10000;
-        max-width: 400px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        ${type === 'success' 
-          ? 'background: #d4edda; color: #155724; border: 1px solid #c3e6cb;' 
-          : 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;'
-        }
-      `;
-      messageDiv.textContent = message;
-      
-      // Add to page
-      document.body.appendChild(messageDiv);
-      
-      // Remove after 5 seconds
-      setTimeout(() => {
-        if (messageDiv.parentNode) {
-          messageDiv.remove();
-        }
-      }, 5000);
-    }
-
-    // Initialize search functionality
-    setupSearch();
-    
-    loadPortfolio();
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>
