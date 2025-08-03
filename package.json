@@ -1,7 +1,7 @@
 {
   "name": "portfolio-manager",
   "version": "1.0.0",
-  "description": "A portfolio manager using Express and MySQL.",
+  "description": "A modern portfolio management application with real-time stock prices and interactive visualizations.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,7 +15,10 @@
   "devDependencies": {
     "nodemon": "^2.0.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": ["portfolio", "stocks", "finance", "trading", "investment", "nodejs", "express", "mysql"],
+  "author": "Portfolio Manager Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }

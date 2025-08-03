@@ -1,53 +1,133 @@
-# Portfolio Manager - MySQL Version
+# 📈 Portfolio Manager
 
-A comprehensive portfolio management application built with Node.js, Express, and MySQL.
+A modern, real-time portfolio management application with live stock price integration.
 
-## Features
+## ✨ Features
 
-- 📊 **Portfolio Management**: Buy and sell stocks with real-time tracking
-- 📈 **Visual Analytics**: Interactive charts (pie, bar, and line charts)
-- 🔍 **Stock Search**: Autocomplete search with 40+ stock symbols
-- 📱 **Responsive Design**: Works on desktop and mobile devices
-- 💰 **Portfolio Summary**: Total value, stock count, and average price
-- 📜 **Transaction History**: Complete log of all trading activities
+- � **Live Stock Prices**: Real-time price data from Yahoo Finance API
+- �📊 **Portfolio Tracking**: Buy/sell stocks with automated gain/loss calculations
+- 📈 **Interactive Charts**: Beautiful pie, bar, and line chart visualizations
+- 🔍 **Smart Search**: Autocomplete stock search (AAPL, TSLA, AMZN, FB, C)
+- 💰 **Portfolio Analytics**: Total value, gains/losses, and performance metrics
+- 📱 **Responsive Design**: Works perfectly on desktop and mobile
+- 🎨 **Modern UI**: Clean, professional interface with glass-morphism effects
 
-## Prerequisites
+## 🚀 Quick Start
 
-Before running this application, ensure you have:
+### Prerequisites
+- Node.js (v14+)
+- MySQL Server (v8.0+)
 
-1. **Node.js** (v14 or higher)
-2. **MySQL Server** (v8.0 or higher)
-3. **npm** (comes with Node.js)
+### Installation
 
-## MySQL Setup
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yashwanthp11/projectneueda.git
+   cd projectneueda
+   ```
 
-### 1. Install MySQL Server
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Download and install MySQL from [https://dev.mysql.com/downloads/mysql/](https://dev.mysql.com/downloads/mysql/)
+3. **Configure environment**
+   ```bash
+   # Create .env file with your MySQL credentials
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=your_password
+   DB_NAME=portfolio_db
+   DB_PORT=3306
+   ```
 
-### 2. Create Database
+4. **Start the application**
+   ```bash
+   npm start
+   ```
 
-You can either:
+5. **Open your browser**
+   ```
+   http://localhost:3000
+   ```
 
-**Option A**: Run the provided SQL script
-```bash
-mysql -u root -p < database_setup.sql
+## 🏗️ Project Structure
+
+```
+📁 projectneueda/
+├── 📁 config/
+│   └── db.js              # MySQL database configuration
+├── 📁 controllers/
+│   └── portfolioController.js  # Business logic
+├── 📁 public/
+│   ├── index.html         # Main application interface
+│   ├── style.css          # Modern styling & animations
+│   └── script.js          # Real-time price integration
+├── 📁 routes/
+│   └── portfolioRoutes.js # API endpoints
+├── server.js              # Express server
+└── package.json           # Dependencies
 ```
 
-**Option B**: Create manually
-```sql
-CREATE DATABASE portfolio_db;
-USE portfolio_db;
-```
+## 🎯 Available Stocks
 
-### 3. Configure Database Connection
+The application supports live pricing for:
+- **AAPL** - Apple Inc.
+- **AMZN** - Amazon.com Inc.
+- **TSLA** - Tesla Inc.
+- **FB** - Meta Platforms Inc.
+- **C** - Citigroup Inc.
 
-Update the `.env` file with your MySQL credentials:
+## 🔧 API Endpoints
 
-```env
-# Database Configuration
-DB_HOST=localhost
-DB_USER=root
+- `GET /api/portfolio` - Get current portfolio
+- `PUT /api/portfolio` - Buy/sell stocks
+- `GET /api/portfolio/history` - Transaction history
+
+## 🎨 Technologies Used
+
+- **Backend**: Node.js, Express.js, MySQL2
+- **Frontend**: Vanilla JavaScript, Chart.js, CSS3
+- **Database**: MySQL with connection pooling
+- **APIs**: AWS Lambda (Yahoo Finance data cache)
+
+## 📊 Features in Detail
+
+### Real-Time Price Integration
+- Automatic price fetching when selecting stocks
+- Live portfolio value updates
+- Gain/loss calculations with current market prices
+- Price caching to optimize API calls
+
+### Portfolio Analytics
+- Total portfolio value with gain/loss indicators
+- Individual stock performance tracking
+- Portfolio distribution charts
+- Transaction history visualization
+
+### Modern Interface
+- Responsive grid layouts
+- Gradient backgrounds and glass-morphism effects
+- Real-time loading indicators
+- Professional typography and spacing
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Yahoo Finance for stock price data
+- Chart.js for beautiful visualizations
+- MySQL for robust data storage
 DB_PASSWORD=your_mysql_password
 DB_NAME=portfolio_db
 DB_PORT=3306

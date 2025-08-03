@@ -217,6 +217,16 @@ body {
     color: #27ae60;
 }
 
+.gain {
+    color: #27ae60 !important;
+    font-weight: bold;
+}
+
+.loss {
+    color: #e74c3c !important;
+    font-weight: bold;
+}
+
 .portfolio-summary {
     background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
     color: white;

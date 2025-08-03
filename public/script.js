@@ -1,27 +1,56 @@
 let currentCharts = { pie: null, bar: null, history: null };
 
+// Available stocks for search (matching your API)
 const stocks = [
     { symbol: 'AAPL', name: 'Apple Inc.' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-    { symbol: 'MSFT', name: 'Microsoft Corporation' },
     { symbol: 'AMZN', name: 'Amazon.com Inc.' },
     { symbol: 'TSLA', name: 'Tesla Inc.' },
-    { symbol: 'META', name: 'Meta Platforms Inc.' },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation' },
-    { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
-    { symbol: 'JNJ', name: 'Johnson & Johnson' },
-    { symbol: 'V', name: 'Visa Inc.' },
-    { symbol: 'PG', name: 'Procter & Gamble Co.' },
-    { symbol: 'UNH', name: 'UnitedHealth Group Inc.' },
-    { symbol: 'MA', name: 'Mastercard Inc.' },
-    { symbol: 'HD', name: 'Home Depot Inc.' },
-    { symbol: 'BAC', name: 'Bank of America Corp.' },
-    { symbol: 'ABBV', name: 'AbbVie Inc.' },
-    { symbol: 'PFE', name: 'Pfizer Inc.' },
-    { symbol: 'KO', name: 'Coca-Cola Co.' },
-    { symbol: 'AVGO', name: 'Broadcom Inc.' },
-    { symbol: 'PEP', name: 'PepsiCo Inc.' }
+    { symbol: 'FB', name: 'Meta Platforms Inc.' },
+    { symbol: 'C', name: 'Citigroup Inc.' }
 ];
+
+// Financial data API configuration
+const FINANCIAL_API_BASE = 'https://c4rm9elh30.execute-api.us-east-1.amazonaws.com/default/cachedPriceData';
+
+// Cache for stock prices to avoid excessive API calls
+const priceCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Function to fetch real-time stock price
+async function fetchStockPrice(ticker) {
+    // Check cache first
+    const cacheKey = ticker.toUpperCase();
+    const cached = priceCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.price;
+    }
+
+    try {
+        const response = await fetch(`${FINANCIAL_API_BASE}?ticker=${ticker}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch price data');
+        }
+        
+        const data = await response.json();
+        if (data.price_data && data.price_data.close && data.price_data.close.length > 0) {
+            // Get the latest closing price
+            const latestPrice = data.price_data.close[data.price_data.close.length - 1];
+            
+            // Cache the price
+            priceCache.set(cacheKey, {
+                price: latestPrice,
+                timestamp: Date.now()
+            });
+            
+            return latestPrice;
+        }
+        
+        throw new Error('No price data available');
+    } catch (error) {
+        console.error(`Error fetching price for ${ticker}:`, error);
+        return null;
+    }
+}
 
 function updateSuggestionSelection(items) {
     items.forEach((item, index) => {
@@ -40,12 +69,9 @@ function showMessage(type, text) {
 }
 
 async function loadPortfolio() {
-    console.log('Loading portfolio...'); // Debug log
     try {
         const response = await fetch('/api/portfolio');
-        console.log('Portfolio response status:', response.status); // Debug log
         const portfolio = await response.json();
-        console.log('Portfolio data:', portfolio); // Debug log
         
         const portfolioDiv = document.getElementById('portfolio');
         const summaryDiv = document.getElementById('portfolioSummary');
@@ -65,48 +91,96 @@ async function loadPortfolio() {
             value: parseFloat(stock.value)
         }));
         
-        console.log('Processed portfolio:', processedPortfolio);
+        // Show loading indicator while fetching prices
+        portfolioDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><div style="font-size: 1.2em;">🔄 Fetching live prices...</div></div>';
+        
+        // Fetch current market prices for all stocks
+        const portfolioWithCurrentPrices = await Promise.all(
+            processedPortfolio.map(async (stock) => {
+                const currentPrice = await fetchStockPrice(stock.symbol);
+                const currentValue = currentPrice ? currentPrice * stock.quantity : stock.value;
+                const gainLoss = currentPrice ? currentValue - stock.value : 0;
+                const gainLossPercent = currentPrice ? ((currentValue - stock.value) / stock.value) * 100 : 0;
+                
+                return {
+                    ...stock,
+                    currentPrice: currentPrice || stock.purchase_price,
+                    currentValue: currentValue,
+                    gainLoss: gainLoss,
+                    gainLossPercent: gainLossPercent,
+                    hasCurrentPrice: !!currentPrice
+                };
+            })
+        );
         
         // Calculate portfolio statistics
-        const totalValue = processedPortfolio.reduce((sum, stock) => sum + stock.value, 0);
-        const totalShares = processedPortfolio.reduce((sum, stock) => sum + stock.quantity, 0);
-        const avgPrice = totalValue / totalShares;
+        const totalCurrentValue = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.currentValue, 0);
+        const totalOriginalValue = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.value, 0);
+        const totalGainLoss = totalCurrentValue - totalOriginalValue;
+        const totalGainLossPercent = (totalGainLoss / totalOriginalValue) * 100;
+        const totalShares = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.quantity, 0);
         
         // Update summary section
-        document.getElementById('totalValue').textContent = `$${totalValue.toFixed(2)}`;
-        document.getElementById('totalStocks').textContent = processedPortfolio.length;
+        document.getElementById('totalStocks').textContent = portfolioWithCurrentPrices.length;
         document.getElementById('totalShares').textContent = totalShares.toLocaleString();
-        document.getElementById('avgPrice').textContent = `$${avgPrice.toFixed(2)}`;
+        document.getElementById('avgPrice').textContent = `$${(totalCurrentValue / totalShares).toFixed(2)}`;
+        
+        // Add gain/loss indicator to summary
+        const gainLossClass = totalGainLoss >= 0 ? 'gain' : 'loss';
+        const gainLossSymbol = totalGainLoss >= 0 ? '+' : '';
+        document.getElementById('totalValue').innerHTML = `
+            $${totalCurrentValue.toFixed(2)}
+            <div style="font-size: 0.8em; margin-top: 5px;" class="${gainLossClass}">
+                ${gainLossSymbol}$${totalGainLoss.toFixed(2)} (${totalGainLossPercent.toFixed(2)}%)
+            </div>
+        `;
+        
         summaryDiv.style.display = 'block';
         
-        // Generate enhanced stock cards
-        portfolioDiv.innerHTML = processedPortfolio.map(stock => `
-            <div class="stock-card">
-                <div class="stock-ticker">
-                    <span>${stock.symbol}</span>
-                    <div class="stock-icon">${stock.symbol.substring(0, 2)}</div>
-                </div>
-                <div class="stock-info">
-                    <span>Shares Owned:</span>
-                    <span>${stock.quantity.toLocaleString()}</span>
-                </div>
-                <div class="stock-info">
-                    <span>Current Price:</span>
-                    <span>$${stock.purchase_price.toFixed(2)}</span>
-                </div>
-                <div class="stock-info">
-                    <span>Portfolio %:</span>
-                    <span>${((stock.value / totalValue) * 100).toFixed(1)}%</span>
-                </div>
-                <div class="stock-info">
-                    <span class="stock-value">Total Value:</span>
-                    <span class="stock-value">$${stock.value.toFixed(2)}</span>
-                </div>
-            </div>
-        `).join('');
+        // Update last updated time
+        const now = new Date();
+        document.getElementById('lastUpdated').textContent = `Prices last updated: ${now.toLocaleTimeString()}`;
         
-        const labels = processedPortfolio.map(stock => stock.symbol);
-        const values = processedPortfolio.map(stock => stock.value);
+        // Generate stock cards with essential data
+        portfolioDiv.innerHTML = portfolioWithCurrentPrices.map(stock => {
+            const gainLossClass = stock.gainLoss >= 0 ? 'gain' : 'loss';
+            const gainLossSymbol = stock.gainLoss >= 0 ? '+' : '';
+            
+            return `
+                <div class="stock-card">
+                    <div class="stock-ticker">
+                        <span>${stock.symbol}</span>
+                        <div class="stock-icon">${stock.symbol.substring(0, 2)}</div>
+                    </div>
+                    <div class="stock-info">
+                        <span>Shares:</span>
+                        <span>${stock.quantity.toLocaleString()}</span>
+                    </div>
+                    <div class="stock-info">
+                        <span>Purchase Price:</span>
+                        <span>$${stock.purchase_price.toFixed(2)}</span>
+                    </div>
+                    <div class="stock-info">
+                        <span>Current Price:</span>
+                        <span ${stock.hasCurrentPrice ? 'style="color: #2ecc71; font-weight: bold;"' : ''}>
+                            $${stock.currentPrice.toFixed(2)}
+                            ${stock.hasCurrentPrice ? ' 🔴' : ''}
+                        </span>
+                    </div>
+                    <div class="stock-info">
+                        <span class="stock-value">Current Value:</span>
+                        <span class="stock-value">$${stock.currentValue.toFixed(2)}</span>
+                    </div>
+                    <div class="stock-info ${gainLossClass}">
+                        <span>Gain/Loss:</span>
+                        <span>${gainLossSymbol}$${stock.gainLoss.toFixed(2)} (${gainLossSymbol}${stock.gainLossPercent.toFixed(2)}%)</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        const labels = portfolioWithCurrentPrices.map(stock => stock.symbol);
+        const values = portfolioWithCurrentPrices.map(stock => stock.currentValue);
         updateCharts(labels, values);
         
     } catch (error) {
@@ -116,31 +190,17 @@ async function loadPortfolio() {
 }
 
 function updateCharts(labels, values) {
-    console.log('Updating charts with:', { labels, values }); // Debug log
-    console.log('Chart.js available:', typeof Chart); // Debug log
-    
     const pieCtx = document.getElementById('pieChart')?.getContext('2d');
     const barCtx = document.getElementById('barChart')?.getContext('2d');
     
-    console.log('Chart contexts found:', { pieCtx: !!pieCtx, barCtx: !!barCtx }); // Debug log
-    
-    if (!pieCtx || !barCtx) {
-        console.error('Chart canvases not found!');
-        return;
-    }
+    if (!pieCtx || !barCtx) return;
     
     // Destroy existing charts
-    if (currentCharts.pie) {
-        console.log('Destroying existing pie chart');
-        currentCharts.pie.destroy();
-    }
-    if (currentCharts.bar) {
-        console.log('Destroying existing bar chart');
-        currentCharts.bar.destroy();
-    }
+    if (currentCharts.pie) currentCharts.pie.destroy();
+    if (currentCharts.bar) currentCharts.bar.destroy();
     
     if (labels.length === 0) {
-        // Clear canvas and show no data message
+        // Show no data message
         pieCtx.clearRect(0, 0, pieCtx.canvas.width, pieCtx.canvas.height);
         barCtx.clearRect(0, 0, barCtx.canvas.width, barCtx.canvas.height);
         
@@ -156,21 +216,15 @@ function updateCharts(labels, values) {
         return;
     }
     
-    // Enhanced color palette
     const colors = [
-        'rgba(52, 152, 219, 0.8)',  // Blue
-        'rgba(46, 204, 113, 0.8)',  // Green
-        'rgba(243, 156, 18, 0.8)',  // Orange
-        'rgba(231, 76, 60, 0.8)',   // Red
-        'rgba(155, 89, 182, 0.8)',  // Purple
-        'rgba(26, 188, 156, 0.8)',  // Turquoise
-        'rgba(241, 196, 15, 0.8)',  // Yellow
-        'rgba(230, 126, 34, 0.8)',  // Dark Orange
+        'rgba(52, 152, 219, 0.8)',
+        'rgba(46, 204, 113, 0.8)',
+        'rgba(243, 156, 18, 0.8)',
+        'rgba(231, 76, 60, 0.8)',
+        'rgba(155, 89, 182, 0.8)'
     ];
     
-    const borderColors = colors.map(color => color.replace('0.8', '1'));
-    
-    // Create enhanced pie chart
+    // Create pie chart
     currentCharts.pie = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
@@ -178,10 +232,7 @@ function updateCharts(labels, values) {
             datasets: [{
                 data: values,
                 backgroundColor: colors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                hoverBorderWidth: 3,
-                hoverOffset: 8
+                borderWidth: 2
             }]
         },
         options: {
@@ -190,29 +241,14 @@ function updateCharts(labels, values) {
             plugins: {
                 legend: { 
                     position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        font: {
-                            size: 12,
-                            family: 'Segoe UI'
-                        }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const percentage = ((context.parsed / values.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-                            return `${context.label}: $${context.parsed.toFixed(2)} (${percentage}%)`;
-                        }
-                    }
+                    labels: { padding: 15, usePointStyle: true }
                 }
             },
             cutout: '60%'
         }
     });
     
-    // Create enhanced bar chart
+    // Create bar chart
     currentCharts.bar = new Chart(barCtx, {
         type: 'bar',
         data: {
@@ -221,43 +257,17 @@ function updateCharts(labels, values) {
                 label: 'Portfolio Value ($)',
                 data: values,
                 backgroundColor: colors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false,
+                borderRadius: 8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { 
-                    display: false 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.label}: $${context.parsed.y.toFixed(2)}`;
-                        }
-                    }
-                }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 y: { 
                     beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toFixed(0);
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
+                    ticks: { callback: function(value) { return '$' + value.toFixed(0); } }
                 }
             }
         }
@@ -265,14 +275,9 @@ function updateCharts(labels, values) {
 }
 
 async function loadHistory() {
-    console.log('Loading history...'); // Debug log
     try {
         const res = await fetch('/api/portfolio/history');
-        console.log('History response status:', res.status); // Debug log
-        
         const data = await res.json();
-        console.log('History data:', data); // Debug log
-        
         const historyCtx = document.getElementById('historyChart').getContext('2d');
         
         // Destroy existing chart
@@ -301,60 +306,19 @@ async function loadHistory() {
                     backgroundColor: 'rgba(155, 89, 182, 0.1)',
                     fill: true,
                     tension: 0.4,
-                    borderWidth: 3,
-                    pointBackgroundColor: 'rgba(155, 89, 182, 1)',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
+                    borderWidth: 3
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
-                        position: 'top',
-                        labels: {
-                            font: {
-                                size: 12,
-                                family: 'Segoe UI'
-                            }
-                        }
-                    },
-                    title: { 
-                        display: true, 
-                        text: 'Transaction History Over Time',
-                        font: {
-                            size: 16,
-                            family: 'Segoe UI',
-                            weight: 'bold'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Net Value: $${context.parsed.y.toFixed(2)}`;
-                            }
-                        }
-                    }
+                    legend: { position: 'top' }
                 },
                 scales: {
                     y: { 
                         beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0,0,0,0.1)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toFixed(0);
-                            }
-                        }
-                    },
-                    x: {
-                        grid: {
-                            color: 'rgba(0,0,0,0.1)'
-                        }
+                        ticks: { callback: function(value) { return '$' + value.toFixed(0); } }
                     }
                 }
             }
@@ -364,10 +328,7 @@ async function loadHistory() {
     }
 }
 
-// Load portfolio on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing...'); // Debug log
-    
     // Initialize search functionality
     const searchInput = document.getElementById('stockSearch');
     const suggestionsDiv = document.getElementById('suggestions');
@@ -384,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const matches = stocks.filter(stock => 
             stock.symbol.toLowerCase().includes(query) || 
             stock.name.toLowerCase().includes(query)
-        ).slice(0, 8);
+        ).slice(0, 5);
 
         if (matches.length > 0) {
             suggestionsDiv.innerHTML = matches.map(stock => 
@@ -399,12 +360,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Suggestion click handler
-    suggestionsDiv.addEventListener('click', function(e) {
+    suggestionsDiv.addEventListener('click', async function(e) {
         if (e.target.classList.contains('suggestion-item')) {
             const symbol = e.target.dataset.symbol;
             searchInput.value = symbol;
             suggestionsDiv.style.display = 'none';
             selectedSuggestionIndex = -1;
+            
+            // Auto-populate price from API
+            const priceInput = document.getElementById('price');
+            priceInput.value = 'Loading...';
+            priceInput.disabled = true;
+            
+            try {
+                const currentPrice = await fetchStockPrice(symbol);
+                if (currentPrice) {
+                    priceInput.value = currentPrice.toFixed(2);
+                } else {
+                    priceInput.value = '';
+                    showMessage('error', 'Could not fetch current price. Please enter manually.');
+                }
+            } catch (error) {
+                priceInput.value = '';
+                showMessage('error', 'Error fetching price. Please enter manually.');
+            } finally {
+                priceInput.disabled = false;
+            }
         }
     });
 
@@ -417,21 +398,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form submission
     const stockForm = document.getElementById('stockForm');
-    console.log('Form element found:', stockForm); // Debug log
-    
     stockForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        console.log('Form submitted!'); // Debug log
         
-        const formData = new FormData(e.target);
         const action = e.submitter.value;
-        
         const ticker = document.getElementById('stockSearch').value.toUpperCase();
         const quantity = parseInt(document.getElementById('quantity').value);
         const price = parseFloat(document.getElementById('price').value);
         const company_name = stocks.find(s => s.symbol === ticker)?.name || ticker;
-        
-        console.log('Form submission:', { ticker, quantity, price, action, company_name });
         
         // Validation
         if (!ticker || !quantity || !price) {
@@ -441,13 +415,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const response = await fetch('/api/portfolio', {
-                method: 'PUT',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ symbol: ticker, quantity, price, action: action.toUpperCase(), company_name })
             });
             
             const result = await response.json();
-            console.log('Server response:', result);
             
             if (response.ok) {
                 showMessage('success', `Successfully ${action.toLowerCase() === 'buy' ? 'bought' : 'sold'} ${quantity} shares of ${ticker}`);
@@ -458,10 +431,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage('error', result.error || 'Transaction failed');
             }
         } catch (error) {
-            console.error('Network error:', error);
             showMessage('error', 'Network error occurred');
         }
     });
+
+    // Refresh prices button
+    const refreshBtn = document.getElementById('refreshPricesBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '🔄 Refreshing...';
+            
+            // Clear price cache to force fresh data
+            priceCache.clear();
+            
+            try {
+                await loadPortfolio();
+                showMessage('success', 'Portfolio prices updated successfully!');
+            } catch (error) {
+                showMessage('error', 'Error refreshing prices. Please try again.');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '🔄 Refresh Prices';
+            }
+        });
+    }
 
     loadPortfolio();
     loadHistory();
