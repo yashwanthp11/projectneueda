@@ -6,7 +6,14 @@ const stocks = [
     { symbol: 'AMZN', name: 'Amazon.com Inc.' },
     { symbol: 'TSLA', name: 'Tesla Inc.' },
     { symbol: 'FB', name: 'Meta Platforms Inc.' },
-    { symbol: 'C', name: 'Citigroup Inc.' }
+    { symbol: 'C', name: 'Citigroup Inc.' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation' },
+    { symbol: 'NFLX', name: 'Netflix Inc.' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation' },
+    { symbol: 'V', name: 'Visa Inc.' },
+    { symbol: 'WMT', name: 'Walmart Inc.' },
+    { symbol: 'DIS', name: 'The Walt Disney Company' }
 ];
 
 // Financial data API configuration
