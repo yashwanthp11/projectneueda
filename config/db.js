@@ -5,12 +5,15 @@ require('dotenv').config();
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'portfolio_db',
-  port: process.env.DB_PORT || 3306,
+  port: parseInt(process.env.DB_PORT) || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true
 });
 
 // Portfolio table schema
@@ -76,7 +79,9 @@ async function testConnection() {
   }
 }
 
-// Initialize database on startup
-initializeDatabase();
+// Initialize database on startup (skip in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  initializeDatabase();
+}
 
 module.exports = { pool, testConnection };

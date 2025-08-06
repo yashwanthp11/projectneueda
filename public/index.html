@@ -3,99 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Manager</title>
+    <title>StockTrader Pro - Live Market Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Portfolio Manager</h1>
+    <div class="trading-platform">
+        <!-- Market Header with Live Data -->
+        <header class="market-header">
+            <div class="header-content">
+                <div class="platform-brand">
+                    <i class="fas fa-chart-line"></i>
+                    <h1>StockTrader Pro</h1>
+                    <span class="beta-badge">LIVE</span>
+                </div>
+                <div class="header-center">
+                    <div class="market-status">
+                        <div class="status-item">
+                            <span class="status-label">Market Status:</span>
+                            <span class="status-value market-open">
+                                <i class="fas fa-circle"></i> OPEN
+                            </span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Update:</span>
+                            <span class="status-value" id="lastUpdateTime">Live</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Stats Bar -->
+        <div class="quick-stats-bar">
+            <div class="stat-ticker">
+                <div class="ticker-item">
+                    <span class="ticker-symbol">S&P 500</span>
+                    <span class="ticker-value positive">4,567.89</span>
+                    <span class="ticker-change positive">+1.2%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">NASDAQ</span>
+                    <span class="ticker-value positive">14,321.45</span>
+                    <span class="ticker-change positive">+0.8%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">DOW</span>
+                    <span class="ticker-value negative">35,678.12</span>
+                    <span class="ticker-change negative">-0.3%</span>
+                </div>
+            </div>
         </div>
         
-        <div class="content">
-            <!-- Stock Trading Form -->
-            <div class="section">
-                <h2>Trade Stocks</h2>
-                <form id="stockForm">
-                    <div class="form-group">
-                        <label for="stockSearch">Stock Symbol:</label>
-                        <div class="search-container">
-                            <input type="text" id="stockSearch" placeholder="Search for stocks (e.g., AAPL, GOOGL)..." autocomplete="off">
-                            <div class="suggestions" id="suggestions"></div>
+        <div class="trading-workspace">
+            <!-- Available Stocks Market Panel - Compact Layout -->
+            <div class="market-stocks-panel compact-stocks">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><i class="fas fa-list"></i> Available Stocks</h2>
+                    <div class="price-legend">
+                        <span style="display: flex; align-items: center; gap: 15px; font-size: 0.9em; color: #9ca3af;">
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-circle" style="color: #10b981; font-size: 0.6em;"></i>
+                                Live Price
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-circle" style="color: #9ca3af; font-size: 0.6em;"></i>
+                                Demo Price
+                            </span>
+                        </span>
+                    </div>
+                </div>
+                <div id="availableStocks" class="stocks-grid-compact"></div>
+            </div>
+
+            <!-- Quick Trade Panel -->
+            <div class="trading-panel">
+                <h2><i class="fas fa-bolt"></i> Quick Trade</h2>
+                <form id="stockForm" class="trade-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="stockSearch"><i class="fas fa-search"></i> Stock Symbol</label>
+                            <div class="search-container">
+                                <input type="text" id="stockSearch" placeholder="Enter symbol (AAPL, TSLA, GOOGL...)" autocomplete="off">
+                                <div class="suggestions" id="suggestions"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="quantity"><i class="fas fa-layer-group"></i> Shares</label>
+                            <input type="number" id="quantity" min="1" placeholder="0" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="price"><i class="fas fa-dollar-sign"></i> Price per Share</label>
+                            <input type="number" id="price" step="0.01" min="0.01" placeholder="0.00" required>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="quantity">Quantity:</label>
-                        <input type="number" id="quantity" min="1" required>
+                    <div class="trading-buttons">
+                        <button type="submit" name="action" value="buy" class="trade-btn buy-order">
+                            <i class="fas fa-arrow-up"></i> BUY
+                        </button>
+                        <button type="submit" name="action" value="sell" class="trade-btn sell-order">
+                            <i class="fas fa-arrow-down"></i> SELL
+                        </button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="price">Price per Share:</label>
-                        <input type="number" id="price" step="0.01" min="0.01" required>
-                    </div>
-                    
-                    <button type="submit" name="action" value="buy" class="btn">Buy</button>
-                    <button type="submit" name="action" value="sell" class="btn sell">Sell</button>
                 </form>
                 
-                <div class="error-message" id="errorMessage"></div>
-                <div class="success-message" id="successMessage"></div>
+                <div class="trading-alerts">
+                    <div class="alert error-alert" id="errorMessage"></div>
+                    <div class="alert success-alert" id="successMessage"></div>
+                </div>
             </div>
 
-            <!-- Portfolio Display -->
-            <div class="section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>Current Portfolio</h2>
-                    <button id="refreshPricesBtn" class="btn" style="font-size: 14px; padding: 8px 16px;">
-                        🔄 Refresh Prices
-                    </button>
+            <!-- Portfolio Value History - Market Style -->
+            <div class="market-chart-panel">
+                <div class="chart-header">
+                    <h2><i class="fas fa-chart-area"></i> Portfolio Performance</h2>
+                    <div class="chart-controls">
+                        <button class="time-period active">1D</button>
+                        <button class="time-period">1W</button>
+                        <button class="time-period">1M</button>
+                        <button class="time-period">1Y</button>
+                        <button class="time-period">ALL</button>
+                    </div>
                 </div>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Portfolio Holdings - Trading Style -->
+            <div class="portfolio-dashboard">
+                <div class="dashboard-header">
+                    <h2><i class="fas fa-briefcase"></i> My Portfolio Holdings</h2>
+                    <div class="portfolio-controls">
+                        <button id="refreshPricesBtn" class="refresh-btn">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Portfolio Summary Cards -->
                 <div id="portfolioSummary" class="portfolio-summary" style="display: none;">
-                    <h3>Total Portfolio Value <span style="font-size: 0.7em; opacity: 0.8;">(Live Prices)</span></h3>
-                    <div class="total-value" id="totalValue">$0.00</div>
-                    <div style="font-size: 0.8em; opacity: 0.9; margin-top: 10px;" id="lastUpdated">
-                        Prices last updated: Never
+                    <div class="summary-cards">
+                        <div class="summary-card total-value">
+                            <div class="card-icon"><i class="fas fa-chart-pie"></i></div>
+                            <div class="card-content">
+                                <div class="card-label">Total Value</div>
+                                <div class="card-value" id="totalValue">$0.00</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon"><i class="fas fa-coins"></i></div>
+                            <div class="card-content">
+                                <div class="card-label">Total Stocks</div>
+                                <div class="card-value" id="totalStocks">0</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon"><i class="fas fa-layer-group"></i></div>
+                            <div class="card-content">
+                                <div class="card-label">Total Shares</div>
+                                <div class="card-value" id="totalShares">0</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon"><i class="fas fa-calculator"></i></div>
+                            <div class="card-content">
+                                <div class="card-label">Avg. Price</div>
+                                <div class="card-value" id="avgPrice">$0.00</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="portfolio-stats">
-                        <div class="stat-card">
-                            <div class="stat-label">Total Stocks</div>
-                            <div class="stat-value" id="totalStocks">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Total Shares</div>
-                            <div class="stat-value" id="totalShares">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Avg. Price</div>
-                            <div class="stat-value" id="avgPrice">$0.00</div>
-                        </div>
-                    </div>
+                    <div class="last-updated" id="lastUpdated">Prices last updated: Never</div>
                 </div>
-                <div id="portfolio" class="portfolio-grid"></div>
+                
+                <!-- Holdings Table -->
+                <div id="portfolio" class="holdings-grid"></div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="section">
-                <h2>Portfolio Analytics</h2>
-                <div class="charts-container">
-                    <div class="chart-section">
-                        <h3>Portfolio Distribution</h3>
-                        <canvas id="pieChart" width="300" height="200"></canvas>
+            <!-- Market Analytics - Moved to End -->
+            <div class="analytics-panel">
+                <h2><i class="fas fa-analytics"></i> Portfolio Analytics</h2>
+                <div class="charts-grid">
+                    <div class="chart-widget">
+                        <h3>Distribution</h3>
+                        <canvas id="pieChart"></canvas>
                     </div>
-                    <div class="chart-section">
+                    <div class="chart-widget">
                         <h3>Stock Values</h3>
-                        <canvas id="barChart" width="300" height="200"></canvas>
+                        <canvas id="barChart"></canvas>
                     </div>
-                </div>
-            </div>
-
-            <!-- Portfolio History -->
-            <div class="section">
-                <h2>Portfolio History</h2>
-                <div class="chart-section" style="height: 250px;">
-                    <canvas id="historyChart" width="400" height="150"></canvas>
                 </div>
             </div>
         </div>

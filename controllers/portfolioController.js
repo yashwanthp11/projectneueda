@@ -94,7 +94,8 @@ exports.updateStock = async (req, res) => {
       );
 
       await connection.commit();
-      res.json({ success: true, message: `Successfully ${action.toLowerCase()}ed ${quantity} shares of ${symbol}` });
+      const actionPastTense = action === 'BUY' ? 'bought' : 'sold';
+      res.json({ success: true, message: `Successfully ${actionPastTense} ${quantity} shares of ${symbol}` });
 
     } catch (error) {
       await connection.rollback();
