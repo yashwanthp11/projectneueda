@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Portfolio Manager</h1>
+        </div>
+        
+        <div class="content">
+            <!-- Stock Trading Form -->
+            <div class="section">
+                <h2>Trade Stocks</h2>
+                <form id="stockForm">
+                    <div class="form-group">
+                        <label for="stockSearch">Stock Symbol:</label>
+                        <div class="search-container">
+                            <input type="text" id="stockSearch" placeholder="Search for stocks (e.g., AAPL, GOOGL)..." autocomplete="off">
+                            <div class="suggestions" id="suggestions"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="quantity">Quantity:</label>
+                        <input type="number" id="quantity" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price">Price per Share:</label>
+                        <input type="number" id="price" step="0.01" min="0.01" required>
+                    </div>
+                    
+                    <button type="submit" name="action" value="buy" class="btn">Buy</button>
+                    <button type="submit" name="action" value="sell" class="btn sell">Sell</button>
+                </form>
+                
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
+            </div>
+
+            <!-- Portfolio Display -->
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Current Portfolio</h2>
+                    <button id="refreshPricesBtn" class="btn" style="font-size: 14px; padding: 8px 16px;">
+                        🔄 Refresh Prices
+                    </button>
+                </div>
+                <div id="portfolioSummary" class="portfolio-summary" style="display: none;">
+                    <h3>Total Portfolio Value <span style="font-size: 0.7em; opacity: 0.8;">(Live Prices)</span></h3>
+                    <div class="total-value" id="totalValue">$0.00</div>
+                    <div style="font-size: 0.8em; opacity: 0.9; margin-top: 10px;" id="lastUpdated">
+                        Prices last updated: Never
+                    </div>
+                    <div class="portfolio-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Stocks</div>
+                            <div class="stat-value" id="totalStocks">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Shares</div>
+                            <div class="stat-value" id="totalShares">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg. Price</div>
+                            <div class="stat-value" id="avgPrice">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="portfolio" class="portfolio-grid"></div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="section">
+                <h2>Portfolio Analytics</h2>
+                <div class="charts-container">
+                    <div class="chart-section">
+                        <h3>Portfolio Distribution</h3>
+                        <canvas id="pieChart" width="300" height="200"></canvas>
+                    </div>
+                    <div class="chart-section">
+                        <h3>Stock Values</h3>
+                        <canvas id="barChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio History -->
+            <div class="section">
+                <h2>Portfolio History</h2>
+                <div class="chart-section" style="height: 250px;">
+                    <canvas id="historyChart" width="400" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
