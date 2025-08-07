@@ -3,7 +3,7 @@ name: Curly braces
 on:
   pull_request:
     branches:
-    - master
+    - main
 
 jobs:
   curly-braces:
