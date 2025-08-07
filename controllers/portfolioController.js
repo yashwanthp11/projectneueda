@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { checkSufficientFunds, deductFunds, addFundsFromSale } = require('./walletController');
 
 exports.getPortfolio = async (req, res) => {
   try {
@@ -39,6 +40,20 @@ exports.updateStock = async (req, res) => {
 
     if (quantity <= 0 || price <= 0) {
       return res.status(400).json({ error: 'Quantity and price must be positive' });
+    }
+
+    // Calculate transaction amount
+    const transactionAmount = quantity * price;
+
+    // Check wallet balance for BUY transactions
+    if (action === 'BUY') {
+      const hasSufficientFunds = await checkSufficientFunds(transactionAmount);
+      if (!hasSufficientFunds) {
+        return res.status(400).json({ 
+          error: 'Insufficient funds in wallet',
+          required: transactionAmount.toFixed(2)
+        });
+      }
     }
 
     const connection = await pool.getConnection();
@@ -94,8 +109,20 @@ exports.updateStock = async (req, res) => {
       );
 
       await connection.commit();
+
+      // Update wallet balance after successful database transaction
+      if (action === 'BUY') {
+        await deductFunds(transactionAmount);
+      } else {
+        await addFundsFromSale(transactionAmount);
+      }
+
       const actionPastTense = action === 'BUY' ? 'bought' : 'sold';
-      res.json({ success: true, message: `Successfully ${actionPastTense} ${quantity} shares of ${symbol}` });
+      res.json({ 
+        success: true, 
+        message: `Successfully ${actionPastTense} ${quantity} shares of ${symbol}`,
+        walletImpact: action === 'BUY' ? -transactionAmount : transactionAmount
+      });
 
     } catch (error) {
       await connection.rollback();

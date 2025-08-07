@@ -80,6 +80,26 @@
             <!-- Quick Trade Panel -->
             <div class="trading-panel">
                 <h2><i class="fas fa-bolt"></i> Quick Trade</h2>
+                
+                <!-- Wallet Section -->
+                <div class="wallet-section">
+                    <div class="wallet-info">
+                        <div class="wallet-balance">
+                            <i class="fas fa-wallet"></i>
+                            <span class="balance-label">Available Balance:</span>
+                            <span class="balance-value" id="walletBalance">$0.00</span>
+                        </div>
+                        <div class="wallet-actions">
+                            <button type="button" class="wallet-btn add-funds" onclick="showAddFundsModal()">
+                                <i class="fas fa-plus"></i> Add Funds
+                            </button>
+                            <button type="button" class="wallet-btn withdraw-funds" onclick="showWithdrawModal()">
+                                <i class="fas fa-minus"></i> Withdraw
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <form id="stockForm" class="trade-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -98,6 +118,18 @@
                         <div class="form-group">
                             <label for="price"><i class="fas fa-dollar-sign"></i> Price per Share</label>
                             <input type="number" id="price" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <!-- Trade Cost Preview -->
+                    <div class="trade-preview" id="tradePreview" style="display: none;">
+                        <div class="preview-item">
+                            <span>Trade Cost:</span>
+                            <span id="tradeCost">$0.00</span>
+                        </div>
+                        <div class="preview-item">
+                            <span>After Trade:</span>
+                            <span id="afterTradeBalance">$0.00</span>
                         </div>
                     </div>
                     
@@ -170,6 +202,13 @@
                             </div>
                         </div>
                         <div class="summary-card">
+                            <div class="card-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="card-content">
+                                <div class="card-label">Total Invested</div>
+                                <div class="card-value" id="totalInvested">$0.00</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
                             <div class="card-icon"><i class="fas fa-calculator"></i></div>
                             <div class="card-content">
                                 <div class="card-label">Avg. Price</div>
@@ -197,6 +236,60 @@
                         <canvas id="barChart"></canvas>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wallet Modals -->
+    <div id="addFundsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add Funds to Wallet</h3>
+                <span class="close" onclick="closeModal('addFundsModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="addAmount">Amount to Add ($)</label>
+                    <input type="number" id="addAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="quick-amounts">
+                    <button type="button" onclick="setAmount('addAmount', 100)">$100</button>
+                    <button type="button" onclick="setAmount('addAmount', 500)">$500</button>
+                    <button type="button" onclick="setAmount('addAmount', 1000)">$1,000</button>
+                    <button type="button" onclick="setAmount('addAmount', 5000)">$5,000</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('addFundsModal')">Cancel</button>
+                <button type="button" class="btn-primary" onclick="addFunds()">Add Funds</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="withdrawModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-minus-circle"></i> Withdraw Funds</h3>
+                <span class="close" onclick="closeModal('withdrawModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="current-balance-info">
+                    <strong>Available Balance: <span id="modalWalletBalance">$0.00</span></strong>
+                </div>
+                <div class="form-group">
+                    <label for="withdrawAmount">Amount to Withdraw ($)</label>
+                    <input type="number" id="withdrawAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="quick-amounts">
+                    <button type="button" onclick="setAmount('withdrawAmount', 100)">$100</button>
+                    <button type="button" onclick="setAmount('withdrawAmount', 500)">$500</button>
+                    <button type="button" onclick="setAmount('withdrawAmount', 1000)">$1,000</button>
+                    <button type="button" onclick="setMaxWithdraw()">All</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('withdrawModal')">Cancel</button>
+                <button type="button" class="btn-primary" onclick="withdrawFunds()">Withdraw</button>
             </div>
         </div>
     </div>

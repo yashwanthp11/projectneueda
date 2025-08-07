@@ -33,11 +33,16 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function() {
+    loadWallet();
     loadPortfolio();
     loadAvailableStocks();
     loadPortfolioSummary();
     updateMarketStatus();
     loadTransactionHistory();
+    
+    // Add event listeners for trade preview
+    document.getElementById('quantity').addEventListener('input', updateTradePreview);
+    document.getElementById('price').addEventListener('input', updateTradePreview);
     
     // Set up periodic updates
     setInterval(() => {
@@ -326,6 +331,7 @@ async function loadPortfolio() {
         // Calculate portfolio statistics
         const totalCurrentValue = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.currentValue, 0);
         const totalOriginalValue = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.value, 0);
+        const totalInvested = portfolioWithCurrentPrices.reduce((sum, stock) => sum + (stock.quantity * stock.purchase_price), 0);
         const totalGainLoss = totalCurrentValue - totalOriginalValue;
         const totalGainLossPercent = (totalGainLoss / totalOriginalValue) * 100;
         const totalShares = portfolioWithCurrentPrices.reduce((sum, stock) => sum + stock.quantity, 0);
@@ -333,6 +339,7 @@ async function loadPortfolio() {
         // Update summary section
         document.getElementById('totalStocks').textContent = portfolioWithCurrentPrices.length;
         document.getElementById('totalShares').textContent = totalShares.toLocaleString();
+        document.getElementById('totalInvested').textContent = `$${totalInvested.toFixed(2)}`;
         document.getElementById('avgPrice').textContent = `$${(totalCurrentValue / totalShares).toFixed(2)}`;
         
         // Add gain/loss indicator to summary
@@ -385,6 +392,17 @@ async function loadPortfolio() {
                         
                         <div class="metric-row">
                             <div class="metric">
+                                <span class="metric-label">Amount Invested</span>
+                                <span class="metric-value invested-highlight">$${(stock.quantity * stock.purchase_price).toFixed(2)}</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Current Value</span>
+                                <span class="metric-value value-highlight">$${stock.currentValue.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-row">
+                            <div class="metric">
                                 <span class="metric-label">Current Price</span>
                                 <span class="metric-value price-live">
                                     $${stock.currentPrice.toFixed(2)}
@@ -394,10 +412,6 @@ async function loadPortfolio() {
                                             '<i class="fas fa-circle demo-indicator" title="Demo Price"></i>'
                                         ) : ''}
                                 </span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Current Value</span>
-                                <span class="metric-value value-highlight">$${stock.currentValue.toFixed(2)}</span>
                             </div>
                         </div>
                         
@@ -835,6 +849,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 showMessage('success', `Successfully ${action.toLowerCase() === 'buy' ? 'bought' : 'sold'} ${quantity} shares of ${ticker}`);
                 document.getElementById('stockForm').reset();
+                document.getElementById('tradePreview').style.display = 'none';
+                loadWallet(); // Refresh wallet balance
                 loadPortfolio();
                 loadHistory();
             } else {
@@ -879,4 +895,166 @@ document.addEventListener('DOMContentLoaded', function() {
             // Portfolio is empty - users can start trading by clicking on available stocks
         }
     }, 2000);
+});
+
+// Wallet Functions
+async function loadWallet() {
+    try {
+        const response = await fetch('/api/wallet');
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateWalletDisplay(data.balance);
+        } else {
+            console.error('Error loading wallet:', data.error);
+        }
+    } catch (error) {
+        console.error('Error loading wallet:', error);
+    }
+}
+
+function updateWalletDisplay(balance) {
+    const walletBalance = document.getElementById('walletBalance');
+    const modalWalletBalance = document.getElementById('modalWalletBalance');
+    
+    if (walletBalance) {
+        walletBalance.textContent = `$${balance.toFixed(2)}`;
+    }
+    if (modalWalletBalance) {
+        modalWalletBalance.textContent = `$${balance.toFixed(2)}`;
+    }
+}
+
+function showAddFundsModal() {
+    document.getElementById('addFundsModal').style.display = 'flex';
+    document.getElementById('addAmount').value = '';
+    document.getElementById('addAmount').focus();
+}
+
+function showWithdrawModal() {
+    loadWallet(); // Refresh balance
+    document.getElementById('withdrawModal').style.display = 'flex';
+    document.getElementById('withdrawAmount').value = '';
+    document.getElementById('withdrawAmount').focus();
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function setAmount(inputId, amount) {
+    document.getElementById(inputId).value = amount;
+}
+
+function setMaxWithdraw() {
+    const balanceText = document.getElementById('modalWalletBalance').textContent;
+    const balance = parseFloat(balanceText.replace('$', '').replace(',', ''));
+    document.getElementById('withdrawAmount').value = balance;
+}
+
+async function addFunds() {
+    const amount = parseFloat(document.getElementById('addAmount').value);
+    
+    if (!amount || amount <= 0) {
+        showMessage('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/wallet/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateWalletDisplay(data.balance);
+            closeModal('addFundsModal');
+            showMessage(`Successfully added $${data.added.toFixed(2)} to wallet`, 'success');
+        } else {
+            showMessage(data.error || 'Failed to add funds', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding funds:', error);
+        showMessage('Failed to add funds', 'error');
+    }
+}
+
+async function withdrawFunds() {
+    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+    
+    if (!amount || amount <= 0) {
+        showMessage('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/wallet/withdraw', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateWalletDisplay(data.balance);
+            closeModal('withdrawModal');
+            showMessage(`Successfully withdrew $${data.withdrawn.toFixed(2)} from wallet`, 'success');
+        } else {
+            showMessage(data.error || 'Failed to withdraw funds', 'error');
+        }
+    } catch (error) {
+        console.error('Error withdrawing funds:', error);
+        showMessage('Failed to withdraw funds', 'error');
+    }
+}
+
+function updateTradePreview() {
+    const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const tradeCost = quantity * price;
+    
+    const previewDiv = document.getElementById('tradePreview');
+    const tradeCostSpan = document.getElementById('tradeCost');
+    const afterTradeBalanceSpan = document.getElementById('afterTradeBalance');
+    
+    if (quantity > 0 && price > 0) {
+        const currentBalanceText = document.getElementById('walletBalance').textContent;
+        const currentBalance = parseFloat(currentBalanceText.replace('$', '').replace(',', ''));
+        const afterBalance = currentBalance - tradeCost;
+        
+        tradeCostSpan.textContent = `$${tradeCost.toFixed(2)}`;
+        afterTradeBalanceSpan.textContent = `$${afterBalance.toFixed(2)}`;
+        afterTradeBalanceSpan.className = afterBalance >= 0 ? 'text-success' : 'text-danger';
+        
+        previewDiv.style.display = 'flex';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+});
+
+// Handle escape key for modals
+window.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
+    }
 });

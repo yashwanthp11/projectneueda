@@ -47,6 +47,16 @@ const transactionSchema = `CREATE TABLE IF NOT EXISTS transactions (
   INDEX idx_symbol_date (symbol, timestamp)
 )`;
 
+// Wallet table schema - manages user's cash balance
+const walletSchema = `CREATE TABLE IF NOT EXISTS wallet (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT DEFAULT 1,
+  balance DECIMAL(15, 2) NOT NULL DEFAULT 10000.00,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user (user_id)
+)`;
+
 // Initialize database tables
 async function initializeDatabase() {
   try {
@@ -57,6 +67,16 @@ async function initializeDatabase() {
     
     await connection.execute(transactionSchema);
     console.log('Transactions table created/verified');
+    
+    await connection.execute(walletSchema);
+    console.log('Wallet table created/verified');
+    
+    // Initialize default wallet if it doesn't exist
+    await connection.execute(`
+      INSERT IGNORE INTO wallet (user_id, balance) 
+      VALUES (1, 10000.00)
+    `);
+    console.log('Default wallet initialized');
     
     connection.release();
   } catch (error) {
