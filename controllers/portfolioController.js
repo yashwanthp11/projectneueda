@@ -33,9 +33,9 @@ exports.updateStock = async (req, res) => {
 
   try {
     // Validation
-    if (!symbol || !quantity || !price || !action) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+    // if (!symbol || !quantity || !price || !action) {
+    //   return res.status(400).json({ error: 'Missing required fields' });
+    // }
 
     if (quantity <= 0 || price <= 0) {
       return res.status(400).json({ error: 'Quantity and price must be positive' });

@@ -2,6 +2,19 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Create MySQL connection pool
+// const pool = mysql.createPool({
+//   host: process.env.DB_HOST || 'localhost',
+//   user: process.env.DB_USER || 'root',
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME || 'portfolio_db',
+//   port: parseInt(process.env.DB_PORT) || 3306,
+//   waitForConnections: true,
+//   connectionLimit: 10,
+//   queueLimit: 0,
+//   acquireTimeout: 60000,
+//   timeout: 60000,
+//   reconnect: true
+// });
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -10,10 +23,7 @@ const pool = mysql.createPool({
   port: parseInt(process.env.DB_PORT) || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  queueLimit: 0
 });
 
 // Portfolio table schema
