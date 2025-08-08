@@ -86,12 +86,26 @@ async function initializeDatabase() {
 }
 
 // Test database connection
+// async function testConnection() {
+//   try {
+//     const connection = await pool.getConnection();
+//     await connection.ping();
+//     connection.release();
+//     console.log('✅ Database connection successful');
+//     return true;
+//   } catch (error) {
+//     console.error('❌ Database connection failed:', error.message);
+//     return false;
+//   }
+// }
+// Test database connection
 async function testConnection() {
   try {
     const connection = await pool.getConnection();
     await connection.ping();
     connection.release();
     console.log('✅ Database connection successful');
+    console.log(`Connected to database: ${process.env.DB_NAME} at ${process.env.DB_HOST}:${process.env.DB_PORT}`);
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
@@ -100,8 +114,13 @@ async function testConnection() {
 }
 
 // Initialize database on startup (skip in test environment)
+// if (process.env.NODE_ENV !== 'test') {
+//   initializeDatabase();
+// }
 if (process.env.NODE_ENV !== 'test') {
-  initializeDatabase();
+  initializeDatabase()
+    .then(() => testConnection())
+    .catch((error) => console.error('Error during initialization:', error.message));
 }
 
 module.exports = { pool, testConnection };
