@@ -37,5 +37,5 @@ An application for managing a portfolio of stocks, including features for  stock
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/portfolio-management.git
-   cd portfolio-management
+   git clone https://github.com/yashwanthp11/projectneuedea.git
+   cd projectneueda
