@@ -6,4 +6,5 @@ router.get('/', controller.getPortfolio);
 router.post('/', controller.updateStock);
 router.get('/history', controller.getHistory);
 
+
 module.exports = router;
